@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AJ7 Corretora — Dashboard de Vendas</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f0f3f7;
+      color: #2c3e50;
+    }
+
+    /* HEADER */
+    header {
+      background: linear-gradient(135deg, #1b3a6b 0%, #2e6da4 100%);
+      padding: 24px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    header h1 { color: #fff; font-size: 1.7rem; font-weight: 700; letter-spacing: 0.5px; }
+    header p  { color: #a8c8e8; font-size: 0.85rem; margin-top: 4px; }
+    .badge { background: rgba(255,255,255,0.15); color: #fff; padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; }
+
+    /* NAV TABS */
+    nav {
+      background: #1b3a6b;
+      display: flex;
+      gap: 4px;
+      padding: 0 32px;
+    }
+    nav button {
+      background: none; border: none; cursor: pointer;
+      color: #a8c8e8; padding: 12px 20px; font-size: 0.9rem;
+      border-bottom: 3px solid transparent; transition: all 0.2s;
+    }
+    nav button:hover  { color: #fff; }
+    nav button.active { color: #fff; border-bottom-color: #27ae60; font-weight: 600; }
+
+    /* MAIN */
+    main { padding: 28px 32px; max-width: 1400px; margin: 0 auto; }
+
+    /* SECTION */
+    .section { display: none; }
+    .section.active { display: block; }
+
+    /* KPI CARDS */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    @media (max-width: 900px) { .kpi-grid { grid-template-columns: repeat(2,1fr); } }
+    @media (max-width: 500px) { .kpi-grid { grid-template-columns: 1fr; } }
+
+    .kpi-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      border-top: 4px solid #2e6da4;
+      transition: transform 0.2s;
+    }
+    .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.1); }
+    .kpi-card .label { font-size: 0.75rem; font-weight: 600; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.8px; }
+    .kpi-card .value { font-size: 1.65rem; font-weight: 700; color: #1b3a6b; margin: 8px 0 4px; }
+    .kpi-card .delta { font-size: 0.82rem; font-weight: 600; }
+    .kpi-card .delta.up   { color: #27ae60; }
+    .kpi-card .delta.down { color: #c0392b; }
+    .kpi-card .prev { font-size: 0.75rem; color: #95a5a6; margin-top: 2px; }
+
+    /* CHARTS GRID */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 28px;
+    }
+    @media (max-width: 900px) { .charts-grid { grid-template-columns: 1fr; } }
+
+    .chart-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    }
+    .chart-card h3 {
+      font-size: 0.95rem; font-weight: 700; color: #1b3a6b;
+      margin-bottom: 16px; padding-bottom: 10px;
+      border-bottom: 1px solid #eee;
+    }
+    .chart-card canvas { max-height: 280px; }
+
+    /* TABLES */
+    .table-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      margin-bottom: 24px;
+      overflow-x: auto;
+    }
+    .table-card h3 {
+      font-size: 0.95rem; font-weight: 700; color: #1b3a6b;
+      margin-bottom: 16px; padding-bottom: 10px;
+      border-bottom: 1px solid #eee;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    thead tr { background: #1b3a6b; color: #fff; }
+    thead th { padding: 10px 12px; text-align: center; font-weight: 600; white-space: nowrap; }
+    thead th:first-child { text-align: left; }
+    tbody tr:nth-child(even) { background: #f8f9fa; }
+    tbody tr:hover { background: #eaf3fb; }
+    tbody tr.total-row { background: #1b3a6b !important; color: #fff; font-weight: 700; }
+    tbody td { padding: 9px 12px; text-align: center; white-space: nowrap; }
+    tbody td:first-child { text-align: left; }
+    .up   { color: #27ae60; font-weight: 600; }
+    .down { color: #c0392b; font-weight: 600; }
+
+    /* FOOTER */
+    footer {
+      text-align: center; padding: 20px;
+      color: #95a5a6; font-size: 0.8rem;
+      border-top: 1px solid #e0e0e0; margin-top: 16px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>AJ7 Corretora de Seguros</h1>
+    <p>Dashboard de Vendas</p>
+  </div>
+  <span class="badge">Período Atual vs Anterior</span>
+</header>
+
+<nav>
+  <button class="active" onclick="showTab('overview')">Visão Geral</button>
+  <button onclick="showTab('seguradora')">Por Seguradora</button>
+  <button onclick="showTab('ramo')">Por Ramo</button>
+  <button onclick="showTab('vendedor')">Por Vendedor</button>
+</nav>
+
+<main>
+
+  <!-- ===== OVERVIEW ===== -->
+  <section id="overview" class="section active">
+
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="label">Apólices</div>
+        <div class="value">128</div>
+        <div class="delta up">▲ 16.4% vs anterior</div>
+        <div class="prev">Anterior: 110</div>
+      </div>
+      <div class="kpi-card" style="border-top-color:#27ae60">
+        <div class="label">Prêmio Líquido</div>
+        <div class="value">R$ 1,34M</div>
+        <div class="delta down">▼ 21.2% vs anterior</div>
+        <div class="prev">Anterior: R$ 1,71M</div>
+      </div>
+      <div class="kpi-card" style="border-top-color:#f39c12">
+        <div class="label">Comissão Gerada</div>
+        <div class="value">R$ 56.814</div>
+        <div class="delta up">▲ 20.3% vs anterior</div>
+        <div class="prev">Anterior: R$ 47.217</div>
+      </div>
+      <div class="kpi-card" style="border-top-color:#8e44ad">
+        <div class="label">Itens</div>
+        <div class="value">128</div>
+        <div class="delta down">▼ 2.3% vs anterior</div>
+        <div class="prev">Anterior: 131</div>
+      </div>
+    </div>
+
+    <div class="charts-grid">
+      <div class="chart-card">
+        <h3>Prêmio Líquido por Seguradora (Top 6)</h3>
+        <canvas id="chartSeg"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>Distribuição por Ramo</h3>
+        <canvas id="chartRamo"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>Comissão por Vendedor</h3>
+        <canvas id="chartVend"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>Apólices: Atual vs Anterior</h3>
+        <canvas id="chartComp"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SEGURADORA ===== -->
+  <section id="seguradora" class="section">
+    <div class="table-card">
+      <h3>Desempenho por Seguradora</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Seguradora</th>
+            <th>Apólices</th>
+            <th>Apól. Ant.</th>
+            <th>Var. Apól.</th>
+            <th>Prêmio Líquido</th>
+            <th>Prêmio Ant.</th>
+            <th>Var. Prêmio</th>
+            <th>Comissão</th>
+            <th>Var. Comissão</th>
+            <th>Itens</th>
+            <th>Mix %</th>
+          </tr>
+        </thead>
+        <tbody id="tbSeg"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ===== RAMO ===== -->
+  <section id="ramo" class="section">
+    <div class="table-card">
+      <h3>Desempenho por Ramo</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Ramo</th>
+            <th>Apólices</th>
+            <th>Apól. Ant.</th>
+            <th>Var. Apól.</th>
+            <th>Prêmio Líquido</th>
+            <th>Prêmio Ant.</th>
+            <th>Var. Prêmio</th>
+            <th>Comissão</th>
+            <th>Var. Comissão</th>
+            <th>Itens</th>
+            <th>Mix %</th>
+          </tr>
+        </thead>
+        <tbody id="tbRamo"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ===== VENDEDOR ===== -->
+  <section id="vendedor" class="section">
+    <div class="table-card">
+      <h3>Desempenho por Vendedor</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Vendedor</th>
+            <th>Apólices</th>
+            <th>Apól. Ant.</th>
+            <th>Var. Apól.</th>
+            <th>Prêmio Líquido</th>
+            <th>Prêmio Ant.</th>
+            <th>Var. Prêmio</th>
+            <th>Comissão</th>
+            <th>Var. Comissão</th>
+            <th>Itens</th>
+            <th>Mix %</th>
+          </tr>
+        </thead>
+        <tbody id="tbVend"></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<footer>AJ7 Corretora de Seguros &nbsp;|&nbsp; Dashboard de Vendas</footer>
+
+<script>
+// ============================================================
+// DATA
+// ============================================================
+const segData = [
+  { nome:'PORTO SEGURO CIA DE SEGUROS GERAIS', apolice:30,apoliceAnt:32,compApolice:'-6.25%',premio:1134447.11,premioAnt:1022385.24,compPremio:'10.96%',comissao:15781.91,compComissao:'18.75%',itens:30,mix:'83.32%' },
+  { nome:'AZUL COMPANHIA DE SEGUROS GERAIS',   apolice:46,apoliceAnt:28,compApolice:'64.29%',premio:103880.29, premioAnt:54605.12,  compPremio:'90.24%',comissao:19958.35,compComissao:'86.80%',itens:43,mix:'8.17%'  },
+  { nome:'ALLIANZ SEGUROS S.A.',                apolice:12,apoliceAnt:10,compApolice:'20.00%',premio:27360.43,  premioAnt:34509.04,  compPremio:'-20.72%',comissao:5301.48, compComissao:'-22.91%',itens:13,mix:'2.15%' },
+  { nome:'HDI SEGUROS S.A.',                    apolice:10,apoliceAnt:9, compApolice:'11.11%',premio:21635.50,  premioAnt:20696.00,  compPremio:'4.54%', comissao:4738.47, compComissao:'3.52%', itens:10,mix:'1.70%'  },
+  { nome:'MAPFRE SEGUROS GERAIS S/A',           apolice:4, apoliceAnt:2, compApolice:'100.00%',premio:15745.94, premioAnt:5779.96,   compPremio:'172.42%',comissao:2469.14, compComissao:'156.13%',itens:4, mix:'1.24%' },
+  { nome:'SUHAI SEGUROS S.A.',                  apolice:9, apoliceAnt:7, compApolice:'28.57%',premio:12590.65,  premioAnt:11031.06,  compPremio:'14.14%',comissao:2623.00, compComissao:'11.63%',itens:8, mix:'1.12%'  },
+  { nome:'TOKIO MARINE SEGURADORA S.A.',        apolice:6, apoliceAnt:2, compApolice:'200.00%',premio:11204.78, premioAnt:6651.49,   compPremio:'68.46%',comissao:2068.58, compComissao:'65.05%',itens:6, mix:'0.88%'  },
+  { nome:'YELUM SEGUROS',                       apolice:3, apoliceAnt:7, compApolice:'-57.14%',premio:5386.84,  premioAnt:18445.26,  compPremio:'-70.80%',comissao:1271.12, compComissao:'-67.07%',itens:4,mix:'0.42%' },
+  { nome:'ALIRO SEGUROS S.A.',                  apolice:1, apoliceAnt:1, compApolice:'0.00%', premio:4319.03,   premioAnt:1960.34,   compPremio:'120.32%',comissao:959.16,  compComissao:'226.19%',itens:1,mix:'0.34%'  },
+  { nome:'BRADESCO SEGUROS S.A',                apolice:1, apoliceAnt:2, compApolice:'-50.00%',premio:1754.07,  premioAnt:8328.26,   compPremio:'-78.94%',comissao:377.93,  compComissao:'-60.64%',itens:2,mix:'0.14%' },
+  { nome:'ZURICH MINAS BRASIL SEGUROS S/A',     apolice:1, apoliceAnt:1, compApolice:'0.00%', premio:1751.86,   premioAnt:2901.16,   compPremio:'-39.62%',comissao:297.82,  compComissao:'2.65%', itens:3, mix:'0.14%' },
+  { nome:'DARWIN SEGUROS S.A',                  apolice:1, apoliceAnt:0, compApolice:'100.00%',premio:1670.60,  premioAnt:0,         compPremio:'100.00%',comissao:284.00,  compComissao:'100.00%',itens:1,mix:'0.13%'  },
+  { nome:'ITAU SEGUROS S/A',                    apolice:1, apoliceAnt:2, compApolice:'-50.00%',premio:1227.20,  premioAnt:3225.64,   compPremio:'-61.95%',comissao:306.80,  compComissao:'-37.99%',itens:1,mix:'0.10%'  },
+  { nome:'PORTOSEG SA',                         apolice:1, apoliceAnt:0, compApolice:'100.00%',premio:1062.00,  premioAnt:0,         compPremio:'100.00%',comissao:212.40,  compComissao:'100.00%',itens:0,mix:'0.08%'  },
+  { nome:'ITAU SEGUROS DE AUTO E RESIDÊNCIA S/A',apolice:2,apoliceAnt:0, compApolice:'100.00%',premio:822.52,   premioAnt:0,         compPremio:'100.00%',comissao:164.50,  compComissao:'100.00%',itens:2,mix:'0.06%'  },
+  { nome:'MITSUI SUMITOMO SEGUROS S/A',         apolice:0, apoliceAnt:1, compApolice:'-100.00%',premio:0,       premioAnt:5088.54,   compPremio:'-100.00%',comissao:0,      compComissao:'-100.00%',itens:0,mix:'0.00%' },
+  { nome:'XL SEGUROS BRASIL S.A.',              apolice:0, apoliceAnt:6, compApolice:'-100.00%',premio:0,       premioAnt:511808.28, compPremio:'-100.00%',comissao:0,      compComissao:'-100.00%',itens:0,mix:'0.00%' },
+  { nome:'TOTAL', apolice:128,apoliceAnt:110,compApolice:'16.36%',premio:1344858.82,premioAnt:1707415.39,compPremio:'-21.23%',comissao:56814.67,compComissao:'20.33%',itens:128,mix:'100.00%', isTotal:true },
+];
+
+const ramoData = [
+  { nome:'CONSÓRCIO',        apolice:0,  apoliceAnt:0,  compApolice:'0.00%',  premio:1088051.63, premioAnt:979956.84, compPremio:'11.03%', comissao:6747.39,  compComissao:'85.50%',  itens:8,  mix:'79.70%' },
+  { nome:'AUTOMÓVEL',        apolice:103,apoliceAnt:76, compApolice:'35.53%', premio:235704.63,  premioAnt:198577.80, compPremio:'18.70%', comissao:45951.41, compComissao:'16.36%',  itens:105,mix:'18.67%' },
+  { nome:'FIANÇA LOCATÍCIA', apolice:0,  apoliceAnt:1,  compApolice:'-100.00%',premio:6729.13,  premioAnt:5099.30,   compPremio:'31.96%', comissao:1682.28,  compComissao:'9.97%',   itens:0,  mix:'0.53%'  },
+  { nome:'SEGURO VIAGEM',    apolice:11, apoliceAnt:8,  compApolice:'37.50%', premio:5753.65,    premioAnt:4067.70,   compPremio:'41.45%', comissao:901.56,   compComissao:'60.14%',  itens:1,  mix:'0.42%'  },
+  { nome:'EMPRESA',          apolice:1,  apoliceAnt:2,  compApolice:'-50.00%',premio:3528.92,   premioAnt:4161.70,   compPremio:'-15.20%',comissao:599.92,   compComissao:'-18.80%', itens:0,  mix:'0.28%'  },
+  { nome:'RESIDÊNCIA',       apolice:10, apoliceAnt:6,  compApolice:'66.67%', premio:2654.70,    premioAnt:1447.23,   compPremio:'83.43%', comissao:520.92,   compComissao:'39.97%',  itens:11, mix:'0.21%'  },
+  { nome:'RISCOS DIVERSOS',  apolice:2,  apoliceAnt:0,  compApolice:'100.00%',premio:2266.30,   premioAnt:0,         compPremio:'100.00%',comissao:394.21,   compComissao:'100.00%', itens:1,  mix:'0.18%'  },
+  { nome:'VIDA INDIVIDUAL',  apolice:1,  apoliceAnt:7,  compApolice:'-85.71%',premio:169.86,    premioAnt:1276.68,   compPremio:'-86.70%',comissao:16.99,    compComissao:'-96.20%', itens:1,  mix:'0.01%'  },
+  { nome:'IMOBILIÁRIO',      apolice:0,  apoliceAnt:2,  compApolice:'-100.00%',premio:0,         premioAnt:632.80,   compPremio:'-100.00%',comissao:0,        compComissao:'-100.00%',itens:0,  mix:'0.00%'  },
+  { nome:'ACIDENTES PESSOAIS',apolice:0, apoliceAnt:2,  compApolice:'-100.00%',premio:0,         premioAnt:387.06,   compPremio:'-100.00%',comissao:0,        compComissao:'-100.00%',itens:0,  mix:'0.00%'  },
+  { nome:'FINANCIAMENTO',    apolice:0,  apoliceAnt:6,  compApolice:'-100.00%',premio:0,         premioAnt:511808.28,compPremio:'-100.00%',comissao:0,        compComissao:'-100.00%',itens:0,  mix:'0.00%'  },
+  { nome:'TOTAL', apolice:128,apoliceAnt:110,compApolice:'16.36%',premio:1344858.82,premioAnt:1707415.39,compPremio:'-21.23%',comissao:56814.67,compComissao:'20.33%',itens:127,mix:'100.00%', isTotal:true },
+];
+
+const vendData = [
+  { nome:'AJ7 CORRETORA DE SEGUROS', apolice:5,  apoliceAnt:1,  compApolice:'400.00%', premio:1091811.31, premioAnt:770904.82, compPremio:'41.63%', comissao:6764.57,  compComissao:'113.31%', itens:2,  mix:'79.98%' },
+  { nome:'SUELEN ALENCAR',           apolice:72, apoliceAnt:41, compApolice:'75.61%',  premio:156868.91,  premioAnt:100180.82, compPremio:'56.59%', comissao:30544.26, compComissao:'46.21%',  itens:57, mix:'12.44%' },
+  { nome:'MICHELLE GARCEZ',          apolice:28, apoliceAnt:0,  compApolice:'100.00%', premio:50007.28,   premioAnt:0,         compPremio:'100.00%',comissao:10169.06, compComissao:'100.00%', itens:31, mix:'3.94%'  },
+  { nome:'MAKELLY DORNELLIS',        apolice:12, apoliceAnt:0,  compApolice:'100.00%', premio:27427.26,   premioAnt:0,         compPremio:'100.00%',comissao:5499.72,  compComissao:'100.00%', itens:7,  mix:'2.16%'  },
+  { nome:'THAIS GALANTE',            apolice:10, apoliceAnt:0,  compApolice:'100.00%', premio:18231.63,   premioAnt:0,         compPremio:'100.00%',comissao:3802.82,  compComissao:'100.00%', itens:15, mix:'1.43%'  },
+  { nome:'JENIFER AZEVEDO',          apolice:1,  apoliceAnt:0,  compApolice:'100.00%', premio:291.72,     premioAnt:209142.77, compPremio:'-99.86%',comissao:49.59,    compComissao:'-90.52%', itens:1,  mix:'0.02%'  },
+  { nome:'ALESSANDRA',               apolice:0,  apoliceAnt:8,  compApolice:'-100.00%',premio:220.71,    premioAnt:1505.05,   compPremio:'-85.34%',comissao:-15.36,   compComissao:'-102.85%',itens:1,  mix:'0.02%'  },
+  { nome:'TOTAL', apolice:128,apoliceAnt:110,compApolice:'16.36%',premio:1344858.82,premioAnt:1707415.39,compPremio:'-21.23%',comissao:56814.67,compComissao:'20.33%',itens:114,mix:'100.00%', isTotal:true },
+];
+
+// ============================================================
+// HELPERS
+// ============================================================
+function fmtBRL(v) {
+  return v.toLocaleString('pt-BR', { style:'currency', currency:'BRL', minimumFractionDigits:2 });
+}
+function deltaClass(s) {
+  return s.startsWith('-') ? 'down' : 'up';
+}
+
+// ============================================================
+// TABLES
+// ============================================================
+function buildTable(tbId, data) {
+  const tb = document.getElementById(tbId);
+  data.forEach(r => {
+    const tr = document.createElement('tr');
+    if (r.isTotal) tr.classList.add('total-row');
+    tr.innerHTML = `
+      <td>${r.nome}</td>
+      <td>${r.apolice}</td>
+      <td>${r.apoliceAnt}</td>
+      <td class="${r.isTotal ? '' : deltaClass(r.compApolice)}">${r.compApolice}</td>
+      <td>${fmtBRL(r.premio)}</td>
+      <td>${fmtBRL(r.premioAnt)}</td>
+      <td class="${r.isTotal ? '' : deltaClass(r.compPremio)}">${r.compPremio}</td>
+      <td>${fmtBRL(r.comissao)}</td>
+      <td class="${r.isTotal ? '' : deltaClass(r.compComissao)}">${r.compComissao}</td>
+      <td>${r.itens}</td>
+      <td>${r.mix}</td>
+    `;
+    tb.appendChild(tr);
+  });
+}
+
+buildTable('tbSeg',  segData);
+buildTable('tbRamo', ramoData);
+buildTable('tbVend', vendData);
+
+// ============================================================
+// CHARTS
+// ============================================================
+const COLORS = ['#2e6da4','#27ae60','#f39c12','#e74c3c','#8e44ad','#1abc9c','#e67e22','#3498db'];
+
+// Chart 1 — Prêmio por Seguradora (top 6)
+const top6 = segData.filter(d => !d.isTotal).slice(0,6);
+new Chart(document.getElementById('chartSeg'), {
+  type: 'bar',
+  data: {
+    labels: top6.map(d => d.nome.split(' ').slice(0,2).join(' ')),
+    datasets: [
+      { label:'Atual',    data: top6.map(d=>d.premio),    backgroundColor:'#2e6da4' },
+      { label:'Anterior', data: top6.map(d=>d.premioAnt), backgroundColor:'#BDC3C7' },
+    ]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    plugins: { legend: { position:'bottom' } },
+    scales: {
+      x: { ticks: { callback: v => 'R$'+Number(v/1000).toFixed(0)+'k' } }
+    }
+  }
+});
+
+// Chart 2 — Ramo (pizza)
+const ramoFilt = ramoData.filter(d => !d.isTotal && d.premio > 0);
+new Chart(document.getElementById('chartRamo'), {
+  type: 'doughnut',
+  data: {
+    labels: ramoFilt.map(d => d.nome),
+    datasets: [{ data: ramoFilt.map(d=>d.premio), backgroundColor: COLORS }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position:'bottom', labels:{ font:{ size:11 } } },
+      tooltip: { callbacks: { label: ctx => ' '+fmtBRL(ctx.parsed) } }
+    }
+  }
+});
+
+// Chart 3 — Comissão por Vendedor
+const vendFilt = vendData.filter(d => !d.isTotal && d.comissao > 0);
+new Chart(document.getElementById('chartVend'), {
+  type: 'bar',
+  data: {
+    labels: vendFilt.map(d => d.nome.split(' ')[0]),
+    datasets: [{
+      label:'Comissão',
+      data: vendFilt.map(d=>d.comissao),
+      backgroundColor: COLORS
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    plugins: { legend: { display:false } },
+    scales: {
+      x: { ticks: { callback: v => 'R$'+Number(v/1000).toFixed(1)+'k' } }
+    }
+  }
+});
+
+// Chart 4 — Apólices atual vs anterior por vendedor
+const vendComp = vendData.filter(d => !d.isTotal && (d.apolice > 0 || d.apoliceAnt > 0));
+new Chart(document.getElementById('chartComp'), {
+  type: 'bar',
+  data: {
+    labels: vendComp.map(d => d.nome.split(' ')[0]),
+    datasets: [
+      { label:'Atual',    data: vendComp.map(d=>d.apolice),    backgroundColor:'#f39c12' },
+      { label:'Anterior', data: vendComp.map(d=>d.apoliceAnt), backgroundColor:'#BDC3C7' },
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { position:'bottom' } },
+  }
+});
+
+// ============================================================
+// TABS
+// ============================================================
+function showTab(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>
